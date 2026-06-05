@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>The Journey — Living Church</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--green:#0F6E56;--green-dark:#085041;--color-text-primary:#111827;--color-text-secondary:#6b7280;--color-text-tertiary:#9ca3af;--color-background-primary:#ffffff;--color-background-secondary:#f9fafb;--color-border-secondary:#e5e7eb;--color-border-tertiary:#f3f4f6;--border-radius-md:8px;--border-radius-lg:12px}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:#F0FDF4;min-height:100vh;color:#111827;-webkit-text-size-adjust:100%}
+    #loading{position:fixed;inset:0;background:#F0FDF4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;z-index:999}
+    #loading p{font-size:14px;color:#6b7280}
+    #auth-screen{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem 1.25rem}
+    .brand{display:flex;align-items:center;gap:14px;margin-bottom:2rem}
+    .brand-icon{width:56px;height:56px;border-radius:16px;background:#0F6E56;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(15,110,86,0.3)}
+    .brand-text small{font-size:13px;color:#6b7280}
+    .brand-text h1{font-size:22px;font-weight:700;color:#111827;margin-top:1px}
+    .brand-text span{color:#0F6E56}
+    .auth-card{background:white;border-radius:22px;width:100%;max-width:420px;box-shadow:0 8px 40px rgba(0,0,0,0.1);overflow:hidden}
+    .tab-bar{display:grid;grid-template-columns:1fr 1fr;background:#f3f4f6;margin:1.5rem 1.5rem 0;border-radius:10px;padding:4px;gap:4px}
+    .tab{padding:9px;font-size:14px;font-weight:500;border:none;background:transparent;border-radius:7px;cursor:pointer;color:#6b7280;font-family:inherit;transition:all 0.15s}
+    .tab.active{background:white;color:#111827;box-shadow:0 1px 4px rgba(0,0,0,0.12)}
+    .auth-body{padding:1.5rem}
+    .auth-body h2{font-size:19px;font-weight:600;margin-bottom:4px}
+    .auth-body .sub{font-size:14px;color:#6b7280;margin-bottom:1.5rem}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:1rem}
+    .field label{font-size:13px;font-weight:500;color:#111827}
+    .field input{padding:12px 14px;font-size:15px;border:1.5px solid #e5e7eb;border-radius:10px;background:white;color:#111827;font-family:inherit;width:100%;transition:border-color 0.15s}
+    .field input:focus{outline:none;border-color:#0F6E56}
+    .field input[type=password]{letter-spacing:2px;font-size:17px}
+    .leader-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:1rem;user-select:none}
+    .leader-toggle input{width:16px;height:16px;accent-color:#0F6E56}
+    .leader-toggle span{font-size:13px;color:#6b7280}
+    .btn-auth{width:100%;padding:14px;font-size:16px;font-weight:600;background:#0F6E56;color:white;border:none;border-radius:10px;cursor:pointer;font-family:inherit;margin-top:4px;transition:background 0.15s,transform 0.1s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-auth:hover{background:#085041}
+    .btn-auth:active{transform:scale(0.98)}
+    .btn-auth:disabled{opacity:0.55;cursor:not-allowed;transform:none}
+    .forgot{font-size:13px;color:#9ca3af;text-align:right;margin-top:4px;margin-bottom:0}
+    .auth-error{font-size:13px;color:#dc2626;background:#fef2f2;border-radius:8px;padding:10px 14px;margin-top:0.875rem;text-align:center;display:none}
+    .auth-note{font-size:12px;color:#9ca3af;text-align:center;margin-top:1.25rem;line-height:1.6;padding-bottom:0.25rem}
+    #app{display:none;max-width:680px;margin:0 auto;padding:1.25rem 1rem;min-height:100vh;background:white}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;font-size:13px;border:0.5px solid #e5e7eb;border-radius:8px;background:transparent;color:#111827;cursor:pointer;font-family:inherit}
+    .btn:hover{background:#f9fafb}
+    .btn-sm{padding:5px 10px;font-size:12px}
+    .btn-primary{background:#0F6E56;border-color:#0F6E56;color:white}
+    .btn-primary:hover{background:#085041}
+    .card{background:white;border:0.5px solid #f3f4f6;border-radius:12px;padding:1rem 1.25rem}
+    input[type=text],input[type=date],select,textarea{padding:8px 10px;font-size:13px;border:0.5px solid #e5e7eb;border-radius:8px;background:white;color:#111827;font-family:inherit}
+    input[type=checkbox]{width:15px;height:15px;cursor:pointer;flex-shrink:0;accent-color:#0F6E56}
+    .badge-circle{transition:transform 0.15s ease}
+    .badge-circle:active{transform:scale(0.92)}
+    @keyframes fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(800px) rotate(560deg);opacity:0}}
+    @keyframes popIn{0%{transform:scale(.3) translateY(10px);opacity:0}65%{transform:scale(1.07);opacity:1}100%{transform:scale(1);opacity:1}}
+    @keyframes slideUp{0%{transform:translateY(20px);opacity:0}100%{transform:translateY(0);opacity:1}}
+    @keyframes dropIn{0%{transform:scale(0.2) translateY(-30px);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1);opacity:1}}
+    @keyframes expandIn{0%{opacity:0;transform:translateY(-6px) scaleY(0.92)}100%{opacity:1;transform:translateY(0) scaleY(1)}}
+    .confp{position:absolute;border-radius:2px;animation:fall linear forwards;pointer-events:none}
+    .pop{animation:popIn .5s cubic-bezier(.34,1.56,.64,1) both}
+    .slide{animation:slideUp .35s ease both}
+    .dropin{animation:dropIn .7s cubic-bezier(.34,1.56,.64,1) both}
+    .expandin{animation:expandIn 0.22s ease both;transform-origin:top center}
+  </style>
+</head>
+<body>
+<div id="loading">
+  <div style="width:56px;height:56px;border-radius:16px;background:#0F6E56;display:flex;align-items:center;justify-content:center"><i class="ti ti-map" style="font-size:28px;color:white"></i></div>
+  <p>Loading The Journey…</p>
+</div>
+<div id="auth-screen">
+  <div class="brand">
+    <div class="brand-icon"><i class="ti ti-map" style="font-size:28px;color:white"></i></div>
+    <div class="brand-text"><small>Living Church</small><h1>The <span>Journey</span></h1></div>
+  </div>
+  <div class="auth-card">
+    <div class="tab-bar">
+      <button class="tab active" id="tabSignin" onclick="setTab('signin')">Sign in</button>
+      <button class="tab" id="tabSignup" onclick="setTab('signup')">Create account</button>
+    </div>
+    <div class="auth-body" id="signinBody">
+      <h2>Welcome back</h2><p class="sub">Sign in to continue your journey</p>
+      <div class="field"><label>Email</label><input type="email" id="siEmail" placeholder="you@example.com" onkeydown="if(event.key==='Enter')doSignIn()"/></div>
+      <div class="field"><label>Password</label><input type="password" id="siPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doSignIn()"/></div>
+      <p class="forgot">Forgot password? Ask your leader to reset it.</p>
+      <button class="btn-auth" id="signinBtn" onclick="doSignIn()"><i class="ti ti-arrow-right"></i> Sign in</button>
+      <div class="auth-error" id="siError"></div>
+    </div>
+    <div class="auth-body" id="signupBody" style="display:none">
+      <h2>Create account</h2><p class="sub">Join The Journey at Living Church</p>
+      <div class="field"><label>Your name</label><input type="text" id="suName" placeholder="Full name"/></div>
+      <div class="field"><label>Email</label><input type="email" id="suEmail" placeholder="you@example.com"/></div>
+      <div class="field"><label>Password</label><input type="password" id="suPassword" placeholder="Choose a password" onkeydown="if(event.key==='Enter')doSignUp()"/></div>
+      <label class="leader-toggle"><input type="checkbox" id="isLeader" onchange="toggleLeaderCode(this.checked)"/><span>I'm a leader — I have an access code</span></label>
+      <div class="field" id="leaderCodeField" style="display:none"><label>Leader access code</label><input type="text" id="suLeaderCode" placeholder="Enter code"/></div>
+      <button class="btn-auth" id="signupBtn" onclick="doSignUp()"><i class="ti ti-user-plus"></i> Create account</button>
+      <div class="auth-error" id="suError"></div>
+      <p class="auth-note">Young people: just fill in your name, email and password. No code needed.</p>
+    </div>
+  </div>
+</div>
+<div id="app"></div>
+<script>
+const SUPABASE_URL='https://qugksnsanfttqcvimjhp.supabase.co'
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF1Z2tzbnNhbmZ0dHFjdmltamhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2MTc1NzEsImV4cCI6MjA5NjE5MzU3MX0.4cemIHi3kKYLWFAGEMzLqHyW_9rz0rP1abjRNYLULGs'
+const LEADER_CODE='living2024'
+const{createClient}=supabase
+const db=createClient(SUPABASE_URL,SUPABASE_KEY)
+
+const STAGES=[{id:'connect',label:'Connect',color:'#0F6E56',bg:'#E1F5EE',desc:'I am part of something'},{id:'grow',label:'Grow',color:'#185FA5',bg:'#E6F1FB',desc:'I am growing'},{id:'serve',label:'Serve',color:'#534AB7',bg:'#EEEDFE',desc:'I am making a difference'},{id:'lead',label:'Lead',color:'#BA7517',bg:'#FAEEDA',desc:'I am leading others'}]
+const SESSION_TYPES=[{id:'friday',label:'Friday youth night'},{id:'sunday',label:'Sunday service'},{id:'small_group',label:'Small group'},{id:'outreach',label:'Outreach'},{id:'camp',label:'Camp / retreat'},{id:'event',label:'Church event'}]
+const DAILY=[{id:'prayer',label:'Prayer',pillar:'Build',icon:'ti-heart'},{id:'bible',label:'Bible reading',pillar:'Build',icon:'ti-book'},{id:'worship',label:'Worship',pillar:'Build',icon:'ti-music'},{id:'gratitude',label:'Gratitude',pillar:'Build',icon:'ti-sun'},{id:'serving',label:'Served someone',pillar:'Bless',icon:'ti-users'}]
+const ACH_TYPES=[{id:'outreach',label:'Took part in outreach / training',pillar:'Bless'},{id:'leading_church',label:'Leading in church',pillar:'Bless'},{id:'mentoring',label:'Investing in someone younger',pillar:'Bless'},{id:'sent_out',label:"Someone's life changed because of them",pillar:'Bless'},{id:'worship_team',label:'Worship team member',pillar:'Bless'},{id:'leadership',label:'Completed leadership training',pillar:'Build'}]
+const PC={Belong:{bg:'#E1F5EE',text:'#085041',border:'#5DCAA5'},Build:{bg:'#EEEDFE',text:'#3C3489',border:'#AFA9EC'},Bless:{bg:'#FAECE7',text:'#712B13',border:'#F0997B'}}
+const BAP_C={bg:'#F0F9FF',text:'#0C4A6E',border:'#7DD3FC',deep:'#0369A1'}
+const BADGES=[
+  {id:'welcomed',label:'Welcomed',tagline:'I belong here',icon:'ti-home',pillar:'Belong',levels:[{n:1,name:'First visit',desc:'Attend youth for the first time',pts:50,f:p=>ySess(p)>=1},{n:2,name:'Regular',desc:'Attend a full term — 10 Friday sessions',pts:100,f:p=>frSess(p)>=10},{n:3,name:'Committed',desc:'Both Sunday and Friday through the year',pts:200,f:p=>frSess(p)>=20&&suSess(p)>=10}]},
+  {id:'rooted',label:'Rooted',tagline:'I am growing',icon:'ti-leaf',pillar:'Build',levels:[{n:1,name:'Starting out',desc:'7-day habit streak',pts:50,f:p=>maxStr(p)>=7},{n:2,name:'Growing',desc:'30-day habit streak',pts:100,f:p=>maxStr(p)>=30},{n:3,name:'Deep roots',desc:'90-day habit streak',pts:200,f:p=>maxStr(p)>=90}]},
+  {id:'faithful',label:'Faithful',tagline:'I am going deeper',icon:'ti-flame',pillar:'Build',levels:[{n:1,name:'Connected',desc:'First small group session',pts:50,f:p=>sgSess(p)>=1},{n:2,name:'Consistent',desc:'Small group through a full term',pts:100,f:p=>sgSess(p)>=10},{n:3,name:'Grounded',desc:'Full year of small group — 25 sessions',pts:200,f:p=>sgSess(p)>=25}]},
+  {id:'fruitful',label:'Fruitful',tagline:'I am making a difference',icon:'ti-heart',pillar:'Bless',levels:[{n:1,name:'First step',desc:'Took part in outreach or training',pts:50,f:p=>hAch(p,'outreach')},{n:2,name:'Serving',desc:'Serving in church — 5 times',pts:100,f:p=>srvs(p)>=5},{n:3,name:'Leading',desc:'Leading in church',pts:200,f:p=>hAch(p,'leading_church')}]},
+  {id:'sent',label:'Sent',tagline:'I am ready to go',icon:'ti-rocket',pillar:'Bless',levels:[{n:1,name:'Inviting',desc:'Brought a friend to youth',pts:50,f:p=>invs(p)>=1},{n:2,name:'Investing',desc:'Invested in someone younger',pts:100,f:p=>hAch(p,'mentoring')},{n:3,name:'Multiplying',desc:"Someone's life changed because of you",pts:200,f:p=>hAch(p,'sent_out')}]},
+]
+
+function ySess(p){return(p.sessions||[]).filter(s=>s.type==='friday'||s.type==='sunday').length}
+function frSess(p){return(p.sessions||[]).filter(s=>s.type==='friday').length}
+function suSess(p){return(p.sessions||[]).filter(s=>s.type==='sunday').length}
+function sgSess(p){return(p.sessions||[]).filter(s=>s.type==='small_group').length}
+function srvs(p){return(p.servings||[]).length}
+function hAch(p,id){return(p.achs||[]).includes(id)}
+function invs(p){return(p.sessions||[]).filter(s=>s.invited).length}
+function habStr(p){const ds=new Set((p.habits||[]).map(h=>h.date));let n=0,d=new Date();while(ds.has(d.toISOString().split('T')[0])){n++;d.setDate(d.getDate()-1)}return n}
+function maxStr(p){const days=[...new Set((p.habits||[]).map(h=>h.date))].sort();if(!days.length)return 0;let mx=1,cur=1;for(let i=1;i<days.length;i++){const diff=(new Date(days[i])-new Date(days[i-1]))/86400000;diff===1?(cur++,mx=Math.max(mx,cur)):cur=1}return mx}
+function bLv(p,id){const b=BADGES.find(x=>x.id===id);if(!b)return 0;let lv=0;b.levels.forEach(l=>{if(l.f(p))lv=l.n});return lv}
+function newLvls(snap,p){const res=[];BADGES.forEach(b=>{const o=bLv(snap,b.id),n=bLv(p,b.id);for(let i=o+1;i<=n;i++)res.push({badge:b,levelNum:i,levelData:b.levels[i-1]})});return res}
+function totLv(p){return BADGES.reduce((s,b)=>s+bLv(p,b.id),0)}
+function pts(p){let n=(p.sessions||[]).length*10+srvs(p)*15+(p.habits||[]).length*5;if(p.baptism)n+=300;BADGES.forEach(b=>{const lv=bLv(p,b.id);b.levels.forEach(l=>{if(l.n<=lv)n+=l.pts})});n+=(p.serviceAwards||[]).reduce((s,a)=>s+(a.pts||10),0);return n}
+function lvl(n){if(n>=1000)return{l:'Blessing',i:'ti-star'};if(n>=500)return{l:'Thriving',i:'ti-bolt'};if(n>=200)return{l:'Growing',i:'ti-leaf'};if(n>=50)return{l:'Starting',i:'ti-trending-up'};return{l:'Beginning',i:'ti-map'}}
+function stg(p){return STAGES.find(s=>s.id===p.stage)||STAGES[0]}
+function compStage(p){const w=bLv(p,'welcomed'),r=bLv(p,'rooted'),f=bLv(p,'faithful'),fr=bLv(p,'fruitful'),s=bLv(p,'sent'),b=!!p.baptism;if(s>=2||fr>=3)return'lead';if(fr>=2||f>=2||s>=1||b)return'serve';if(w>=2||r>=1||f>=1)return'grow';return'connect'}
+function mkConf(cols){const cc=cols||['#1D9E75','#7F77DD','#D85A30','#185FA5','#BA7517','#D4537E'];let h='';for(let i=0;i<28;i++){const c=cc[i%cc.length],l=Math.floor(Math.random()*96),d=(Math.random()*2.8).toFixed(2),dur=(1.5+Math.random()*2).toFixed(2),w=Math.floor(5+Math.random()*9),ht=Math.floor(5+Math.random()*14);h+=`<div class="confp" style="left:${l}%;top:0;width:${w}px;height:${ht}px;background:${c};animation-duration:${dur}s;animation-delay:${d}s"></div>`}return h}
+function fmt(d){return new Date(d).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}
+function sd(r){return r?.status==='fulfilled'?r?.value?.data:null}
+
+const TODAY=new Date().toISOString().split('T')[0]
+let SESSION=null
+let S={sc:'leaderDash',youth:[],person:null,sel:null,addY:false,newName:'',logMode:null,logData:{type:'friday',date:TODAY,invited:false,role:'',achId:''},habitForm:{},habitEditing:false,cel:[],celAll:false,celBaptism:false,glType:'friday',glDate:TODAY,glSel:{},groupSummary:null,selBadge:null,awardTypes:[],addingAwardType:false,newAwardLabel:'',newAwardPts:10,announcements:[],postingAnn:false,newAnnTitle:'',newAnnBody:'',biblePlanUrl:'',biblePlanName:'',editingBiblePlan:false}
+
+async function hashPw(pw){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw+'_tjourney'));return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join('')}
+function setTab(t){document.getElementById('signinBody').style.display=t==='signin'?'block':'none';document.getElementById('signupBody').style.display=t==='signup'?'block':'none';document.getElementById('tabSignin').className='tab'+(t==='signin'?' active':'');document.getElementById('tabSignup').className='tab'+(t==='signup'?' active':'')}
+function toggleLeaderCode(on){document.getElementById('leaderCodeField').style.display=on?'block':'none'}
+function showErr(id,msg){const el=document.getElementById(id);if(el){el.textContent=msg;el.style.display='block'}}
+function clearErr(id){const el=document.getElementById(id);if(el)el.style.display='none'}
+function resetBtn(id,html){const b=document.getElementById(id);if(b){b.disabled=false;b.innerHTML=html}}
+
+async function doSignIn(){
+  clearErr('siError')
+  const email=document.getElementById('siEmail').value.trim().toLowerCase()
+  const pw=document.getElementById('siPassword').value
+  if(!email||!pw){showErr('siError','Please fill in all fields');return}
+  const btn=document.getElementById('signinBtn');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Signing in…'
+  try{
+    const hash=await hashPw(pw)
+    const{data:user,error}=await db.from('users').select('*').eq('email',email).eq('password_hash',hash).maybeSingle()
+    if(error)throw new Error(error.message)
+    if(!user){showErr('siError','Incorrect email or password');resetBtn('signinBtn','<i class="ti ti-arrow-right"></i> Sign in');return}
+    await startSess(user)
+  }catch(e){showErr('siError',e.message||'Sign in failed');resetBtn('signinBtn','<i class="ti ti-arrow-right"></i> Sign in')}
+}
+
+async function doSignUp(){
+  clearErr('suError')
+  const name=document.getElementById('suName').value.trim()
+  const email=document.getElementById('suEmail').value.trim().toLowerCase()
+  const pw=document.getElementById('suPassword').value
+  const isLeader=document.getElementById('isLeader').checked
+  const leaderCode=(document.getElementById('suLeaderCode')?.value||'').trim()
+  if(!name||!email||!pw){showErr('suError','Please fill in all fields');return}
+  if(pw.length<6){showErr('suError','Password must be at least 6 characters');return}
+  const btn=document.getElementById('signupBtn');btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Creating account…'
+  try{
+    if(isLeader&&leaderCode.toLowerCase()!==LEADER_CODE.toLowerCase())throw new Error('Incorrect leader access code')
+    const{data:existing}=await db.from('users').select('id').eq('email',email).maybeSingle()
+    if(existing)throw new Error('Email already registered — try signing in')
+    const hash=await hashPw(pw)
+    let role=isLeader?'leader':'youth',youthId=null
+    if(role==='youth'){
+      const{data:yr,error:ye}=await db.from('youth').insert({name,stage:'connect',joined:TODAY}).select().single()
+      if(ye)throw new Error('Could not create profile: '+ye.message)
+      youthId=yr.id
+    }
+    const{data:user,error:ue}=await db.from('users').insert({name,email,password_hash:hash,role,youth_id:youthId}).select().single()
+    if(ue)throw new Error('Could not create account: '+ue.message)
+    await startSess(user)
+  }catch(e){showErr('suError',e.message||'Sign up failed');resetBtn('signupBtn','<i class="ti ti-user-plus"></i> Create account')}
+}
+
+async function startSess(user){
+  SESSION={id:user.id,name:user.name,role:user.role,youthId:user.youth_id}
+  localStorage.setItem('tj_session',JSON.stringify(SESSION))
+  await loadData()
+  S.sc=SESSION.role==='leader'?'leaderDash':'youthHome'
+  document.getElementById('auth-screen').style.display='none'
+  document.getElementById('app').style.display='block'
+  document.body.style.background='white'
+  render()
+}
+
+function signOut(){
+  SESSION=null;localStorage.removeItem('tj_session')
+  S.youth=[];S.person=null;S.announcements=[];S.awardTypes=[]
+  document.getElementById('app').style.display='none'
+  document.getElementById('auth-screen').style.display='flex'
+  document.body.style.background='#F0FDF4'
+  ;['siEmail','siPassword'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''})
+  resetBtn('signinBtn','<i class="ti ti-arrow-right"></i> Sign in')
+  clearErr('siError');clearErr('suError')
+}
+
+async function loadData(){
+  const isLeader=SESSION.role==='leader'
+  const queries=isLeader?[
+    db.from('youth').select('*').order('name'),
+    db.from('sessions').select('*').order('date',{ascending:false}),
+    db.from('servings').select('*').order('date',{ascending:false}),
+    db.from('habits').select('*'),
+    db.from('achievements').select('*'),
+    db.from('service_award_types').select('*').order('created_at'),
+    db.from('service_awards').select('*').order('date',{ascending:false}),
+    db.from('announcements').select('*').order('created_at',{ascending:false}).limit(20),
+    db.from('app_settings').select('*').in('key',['bible_plan_url','bible_plan_name']),
+  ]:[
+    db.from('youth').select('*').eq('id',SESSION.youthId).single(),
+    db.from('sessions').select('*').eq('youth_id',SESSION.youthId).order('date',{ascending:false}),
+    db.from('servings').select('*').eq('youth_id',SESSION.youthId),
+    db.from('habits').select('*').eq('youth_id',SESSION.youthId),
+    db.from('achievements').select('*').eq('youth_id',SESSION.youthId),
+    db.from('service_award_types').select('*').order('created_at'),
+    db.from('service_awards').select('*').eq('youth_id',SESSION.youthId).order('date',{ascending:false}),
+    db.from('announcements').select('*').order('created_at',{ascending:false}).limit(20),
+    db.from('app_settings').select('*').in('key',['bible_plan_url','bible_plan_name']),
+  ]
+  const res=await Promise.allSettled(queries)
+  const[d0,d1,d2,d3,d4,d5,d6,d7,d8]=res.map(sd)
+  S.awardTypes=d5||[];S.announcements=d7||[]
+  const pu=(d8||[]).find(r=>r.key==='bible_plan_url');const pn=(d8||[]).find(r=>r.key==='bible_plan_name')
+  S.biblePlanUrl=pu?.value||'';S.biblePlanName=pn?.value||'Group Bible Plan'
+  if(isLeader){
+    S.youth=(d0||[]).map(y=>({id:y.id,name:y.name,stage:y.stage,joined:y.joined,baptism:y.baptism_date?{date:y.baptism_date}:null,sessions:(d1||[]).filter(s=>s.youth_id===y.id).map(s=>({id:s.id,date:s.date,type:s.type,invited:s.invited})),servings:(d2||[]).filter(s=>s.youth_id===y.id).map(s=>({id:s.id,date:s.date,role:s.role||''})),habits:(d3||[]).filter(h=>h.youth_id===y.id).map(h=>({id:h.id,date:h.date,prayer:h.prayer,bible:h.bible,worship:h.worship,gratitude:h.gratitude,serving:h.serving})),achs:(d4||[]).filter(a=>a.youth_id===y.id).map(a=>a.achievement_id),serviceAwards:(d6||[]).filter(a=>a.youth_id===y.id).map(a=>({id:a.id,date:a.date,pts:a.pts,typeId:a.type_id}))}))
+  } else {
+    if(!d0)throw new Error('Profile not found — please sign up again')
+    S.person={id:d0.id,name:d0.name,stage:d0.stage,joined:d0.joined,baptism:d0.baptism_date?{date:d0.baptism_date}:null,sessions:(d1||[]).map(s=>({id:s.id,date:s.date,type:s.type,invited:s.invited})),servings:(d2||[]).map(s=>({id:s.id,date:s.date,role:s.role||''})),habits:(d3||[]).map(h=>({id:h.id,date:h.date,prayer:h.prayer,bible:h.bible,worship:h.worship,gratitude:h.gratitude,serving:h.serving})),achs:(d4||[]).map(a=>a.achievement_id),serviceAwards:(d6||[]).map(a=>({id:a.id,date:a.date,pts:a.pts,typeId:a.type_id}))}
+  }
+}
+
+async function syncStage(p){const ns=compStage(p);if(ns!==p.stage){p.stage=ns;await db.from('youth').update({stage:ns}).eq('id',p.id)}}
+async function ensAch(p,achId){if(!hAch(p,achId)){const{error}=await db.from('achievements').insert({youth_id:p.id,achievement_id:achId});if(!error)p.achs.push(achId)}}
+function togGlAll(){const on=S.youth.every(y=>S.glSel[y.id]?.on);S.youth.forEach(y=>{S.glSel[y.id]={on:!on,invited:S.glSel[y.id]?.invited||false}});render()}
+function togGlP(id){S.glSel[id]={on:!(S.glSel[id]?.on),invited:S.glSel[id]?.invited||false};render()}
+function togGlI(id){S.glSel[id]={on:true,invited:!(S.glSel[id]?.invited)};render()}
+function togBadge(id){S.selBadge=S.selBadge===id?null:id;render()}
+function startEditHab(pid){const p=SESSION.role==='leader'?S.youth.find(y=>y.id===pid):S.person;if(!p)return;const t=p.habits.find(h=>h.date===TODAY);S.habitForm=t?Object.fromEntries(DAILY.map(d=>[d.id,!!t[d.id]])):{}; S.habitEditing=true;render()}
+function showCel(id){const p=S.youth.find(y=>y.id===id);if(!p)return;S.cel=BADGES.map(b=>({badge:b,levelNum:bLv(p,b.id)})).filter(x=>x.levelNum>0).map(x=>({badge:x.badge,levelNum:x.levelNum,levelData:x.badge.levels[x.levelNum-1]}));S.celAll=true;S.celBaptism=false;S.sel=id;S.sc='celebrate';render()}
+function closeCel(){S.cel=[];S.celAll=false;S.celBaptism=false;S.sc=SESSION.role==='leader'?'leaderProfile':'youthHome';render()}
+
+async function addPerson(){if(!S.newName.trim())return;const{data}=await db.from('youth').insert({name:S.newName.trim(),stage:'connect',joined:TODAY}).select().single();if(data){S.youth.push({id:data.id,name:data.name,stage:data.stage,joined:data.joined,baptism:null,sessions:[],servings:[],habits:[],achs:[],serviceAwards:[]});S.youth.sort((a,b)=>a.name.localeCompare(b.name))}S.newName='';S.addY=false;render()}
+async function removePerson(id){if(!confirm('Remove?'))return;await db.from('youth').delete().eq('id',id);S.youth=S.youth.filter(y=>y.id!==id);S.sc='leaderDash';render()}
+async function setStage(id,sid){const p=S.youth.find(y=>y.id===id);if(!p)return;p.stage=sid;await db.from('youth').update({stage:sid}).eq('id',id);render()}
+async function saveGroupLog(){const att=S.youth.filter(y=>S.glSel[y.id]?.on);if(!att.length)return;const{data:ins}=await db.from('sessions').insert(att.map(p=>({youth_id:p.id,date:S.glDate,type:S.glType,invited:!!S.glSel[p.id]?.invited}))).select();const nL=[];for(const p of att){const sn=JSON.parse(JSON.stringify(p));const s=ins?.find(x=>x.youth_id===p.id);if(s)p.sessions.push({id:s.id,date:s.date,type:s.type,invited:s.invited});if(S.glType==='outreach')await ensAch(p,'outreach');await syncStage(p);newLvls(sn,p).forEach(x=>nL.push({person:p.name,...x}))}S.groupSummary={count:att.length,newLevels:nL,type:SESSION_TYPES.find(t=>t.id===S.glType)?.label||'Session',date:S.glDate};S.glSel={};S.sc='groupSummary';render()}
+async function logSession(){const p=S.youth.find(y=>y.id===S.sel);if(!p)return;const sn=JSON.parse(JSON.stringify(p));const{data}=await db.from('sessions').insert({youth_id:p.id,date:S.logData.date,type:S.logData.type,invited:S.logData.invited}).select().single();if(data){p.sessions.push({id:data.id,date:data.date,type:data.type,invited:data.invited});if(S.logData.type==='outreach')await ensAch(p,'outreach');await syncStage(p)}const nm=newLvls(sn,p);S.logMode=null;S.logData={type:'friday',date:TODAY,invited:false,role:'',achId:''};if(nm.length){S.cel=nm;S.celAll=false;S.celBaptism=false;S.sc='celebrate'}render()}
+async function logServing(){const p=S.youth.find(y=>y.id===S.sel);if(!p)return;const sn=JSON.parse(JSON.stringify(p));const{data}=await db.from('servings').insert({youth_id:p.id,date:S.logData.date,role:S.logData.role}).select().single();if(data){p.servings.push({id:data.id,date:data.date,role:data.role||''});await syncStage(p)}const nm=newLvls(sn,p);S.logMode=null;S.logData={type:'friday',date:TODAY,invited:false,role:'',achId:''};if(nm.length){S.cel=nm;S.celAll=false;S.celBaptism=false;S.sc='celebrate'}render()}
+async function awardAch(){const p=S.youth.find(y=>y.id===S.sel);if(!p||!S.logData.achId)return;const sn=JSON.parse(JSON.stringify(p));await ensAch(p,S.logData.achId);await syncStage(p);const nm=newLvls(sn,p);S.logMode=null;S.logData={type:'friday',date:TODAY,invited:false,role:'',achId:''};if(nm.length){S.cel=nm;S.celAll=false;S.celBaptism=false;S.sc='celebrate'}render()}
+async function logBaptism(){const p=S.youth.find(y=>y.id===S.sel);if(!p)return;await db.from('youth').update({baptism_date:S.logData.date}).eq('id',p.id);p.baptism={date:S.logData.date};await syncStage(p);S.logMode=null;S.logData={type:'friday',date:TODAY,invited:false,role:'',achId:''};S.celBaptism=true;S.celAll=false;S.cel=[];S.sc='celebrate';render()}
+async function saveHabits(){const p=SESSION.role==='leader'?S.youth.find(y=>y.id===S.sel):S.person;if(!p)return;const ex=p.habits.find(h=>h.date===TODAY);const hasAny=DAILY.some(d=>S.habitForm[d.id]);const data={youth_id:p.id,date:TODAY,prayer:!!S.habitForm.prayer,bible:!!S.habitForm.bible,worship:!!S.habitForm.worship,gratitude:!!S.habitForm.gratitude,serving:!!S.habitForm.serving};if(ex){if(hasAny){await db.from('habits').update(data).eq('id',ex.id);Object.assign(ex,S.habitForm)}else{await db.from('habits').delete().eq('id',ex.id);p.habits=p.habits.filter(h=>h.date!==TODAY)}}else if(hasAny){const{data:row}=await db.from('habits').insert(data).select().single();if(row)p.habits.push({id:row.id,date:row.date,prayer:row.prayer,bible:row.bible,worship:row.worship,gratitude:row.gratitude,serving:row.serving})}S.habitEditing=false;render()}
+async function giveAward(youthId,typeId){const p=S.youth.find(y=>y.id===youthId)||S.person;if(!p)return;const t=S.awardTypes.find(x=>x.id===typeId);if(!t)return;const{data}=await db.from('service_awards').insert({youth_id:youthId,type_id:typeId,date:TODAY,pts:t.pts}).select().single();if(data){p.serviceAwards=p.serviceAwards||[];p.serviceAwards.unshift({id:data.id,date:data.date,pts:data.pts,typeId:data.type_id})}render()}
+async function removeAward(awardId,youthId){await db.from('service_awards').delete().eq('id',awardId);const p=S.youth.find(y=>y.id===youthId)||S.person;if(p)p.serviceAwards=(p.serviceAwards||[]).filter(a=>a.id!==awardId);render()}
+async function addAwardType(){const lbl=S.newAwardLabel.trim();if(!lbl)return;const id=lbl.toLowerCase().replace(/[^a-z0-9]+/g,'_').slice(0,30)+'_'+Date.now();const{data}=await db.from('service_award_types').insert({id,label:lbl,icon:'ti-star',pts:S.newAwardPts||10}).select().single();if(data)S.awardTypes.push(data);S.newAwardLabel='';S.newAwardPts=10;S.addingAwardType=false;render()}
+async function postAnn(){if(!S.newAnnBody.trim())return;const{data}=await db.from('announcements').insert({title:S.newAnnTitle.trim(),body:S.newAnnBody.trim()}).select().single();if(data)S.announcements.unshift(data);S.newAnnTitle='';S.newAnnBody='';S.postingAnn=false;render()}
+async function delAnn(id){if(!confirm('Delete this message?'))return;await db.from('announcements').delete().eq('id',id);S.announcements=S.announcements.filter(a=>a.id!==id);render()}
+async function savePlan(){await db.from('app_settings').upsert({key:'bible_plan_url',value:S.biblePlanUrl});await db.from('app_settings').upsert({key:'bible_plan_name',value:S.biblePlanName});S.editingBiblePlan=false;render()}
+
+// UI helpers
+function ptag(l,pillar){const c=PC[pillar]||PC.Belong;return`<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:${c.bg};color:${c.text}">${l}</span>`}
+function batpCard(p){if(!p.baptism)return'';return`<div style="display:flex;align-items:center;gap:12px;padding:13px 16px;background:${BAP_C.bg};border:0.5px solid ${BAP_C.border};border-radius:12px;margin-bottom:1rem"><div style="width:42px;height:42px;border-radius:50%;background:${BAP_C.deep};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-droplet-filled" style="font-size:20px;color:white"></i></div><div style="flex:1"><p style="font-size:14px;font-weight:500;color:${BAP_C.text}">Baptised</p><p style="font-size:12px;color:${BAP_C.deep};margin-top:2px">${p.baptism.date}</p></div><span style="font-size:11px;padding:3px 8px;border-radius:20px;background:white;color:${BAP_C.deep}">+300★</span></div>`}
+
+function badgePath(p){const items=BADGES.map(b=>{const lv=bLv(p,b.id);const c=PC[b.pillar];const sel=S.selBadge===b.id;const dots=[1,2,3].map(n=>`<div style="width:6px;height:6px;border-radius:50%;background:${lv>=n?c.border:'#f3f4f6'}"></div>`).join('');return`<div class="badge-circle" onclick="togBadge('${b.id}')" style="flex:1;text-align:center;cursor:pointer;user-select:none"><div style="width:48px;height:48px;border-radius:50%;background:${lv>0?c.bg:'#f9fafb'};border:${sel?'3px':'2px'} solid ${sel?c.border:lv>0?c.border:'#e5e7eb'};display:flex;align-items:center;justify-content:center;margin:0 auto 5px;${sel?'box-shadow:0 0 0 4px '+c.bg+';':''}transition:border 0.15s"><i class="ti ${lv>0?b.icon:'ti-lock'}" style="font-size:18px;color:${lv>0?c.text:sel?c.text:'#9ca3af'}"></i></div><div style="display:flex;justify-content:center;gap:3px;margin-bottom:4px">${dots}</div><p style="font-size:10px;color:${sel?c.text:lv>0?c.text:'#9ca3af'};font-weight:${sel||lv>0?500:400}">${b.label}${lv>0?` · L${lv}`:''}</p></div>`});return`<div style="display:flex;align-items:flex-start">${items.join(`<div style="width:10px;height:1px;background:#f3f4f6;margin-top:24px;flex-shrink:0"></div>`)}</div>`}
+
+function badgeExp(p){if(!S.selBadge)return`<p style="font-size:12px;color:#9ca3af;text-align:center;margin-top:12px">Tap any badge to see the levels</p>`;const b=BADGES.find(x=>x.id===S.selBadge);if(!b)return'';const c=PC[b.pillar];const lv=bLv(p,b.id);const rows=b.levels.map(l=>{const earned=lv>=l.n;const isCur=lv===l.n;return`<div style="display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:0.5px solid ${c.border}28"><div style="width:28px;height:28px;border-radius:50%;background:${earned?c.border:'transparent'};border:1.5px solid ${earned?c.border:'#e5e7eb'};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${earned?`<i class="ti ti-check" style="font-size:12px;color:white"></i>`:`<span style="font-size:10px;font-weight:600;color:#9ca3af">${l.n}</span>`}</div><div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><p style="font-size:13px;font-weight:500;color:${earned?c.text:'#6b7280'}">${l.name}</p>${isCur?`<span style="font-size:10px;padding:1px 6px;border-radius:20px;background:white;color:${c.text}">current</span>`:''}</div><p style="font-size:12px;color:${earned?c.text:'#9ca3af'};margin-top:3px;line-height:1.45">${l.desc}</p></div><span style="font-size:11px;color:${earned?c.text:'#9ca3af'};flex-shrink:0;margin-top:2px">+${l.pts}★</span></div>`}).join('');return`<div class="expandin" style="background:${c.bg};border:0.5px solid ${c.border};border-radius:12px;padding:14px 16px;margin-top:12px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><div style="width:34px;height:34px;border-radius:50%;background:${lv>0?c.border:'rgba(0,0,0,0.06)'};display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${b.icon}" style="font-size:16px;color:${lv>0?'white':c.text}"></i></div><div style="flex:1"><p style="font-size:14px;font-weight:600;color:${c.text}">${b.label}</p><p style="font-size:12px;color:${c.text};opacity:0.65;font-style:italic">${b.tagline}</p></div>${lv>0?`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:white;color:${c.text};font-weight:500">Level ${lv} of 3</span>`:`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:rgba(0,0,0,0.06);color:${c.text};opacity:0.6">Not started</span>`}</div>${rows}</div>`}
+
+function stepBar(p,col){const si=STAGES.findIndex(s=>s.id===p.stage);return STAGES.map((s,i)=>`<div style="flex:1;text-align:center"><div style="width:26px;height:26px;border-radius:50%;background:${i<=si?s.color:'rgba(255,255,255,0.22)'};display:flex;align-items:center;justify-content:center;margin:0 auto 4px;color:${i<=si?'white':col}">${i<si?`<i class="ti ti-check" style="font-size:12px"></i>`:`<span style="font-size:10px;font-weight:500">${i+1}</span>`}</div><p style="font-size:10px;color:${col};opacity:${i<=si?1:0.38};font-weight:${i===si?500:400}">${s.label}</p></div>`).join(`<div style="width:16px;height:1px;background:${col}20;margin-top:13px;flex-shrink:0"></div>`)}
+function sbox(l,v,ic){return`<div style="background:#f9fafb;border-radius:8px;padding:12px;text-align:center"><i class="ti ${ic}" style="font-size:15px;color:#6b7280"></i><p style="font-size:20px;font-weight:500;color:#111827;margin-top:4px">${v}</p><p style="font-size:12px;color:#6b7280">${l}</p></div>`}
+function habGrid(p,n=21){const ds=new Set((p.habits||[]).map(h=>h.date));const d=new Date();let h=`<div style="display:flex;gap:3px;flex-wrap:wrap">`;for(let i=n-1;i>=0;i--){const dd=new Date(d);dd.setDate(dd.getDate()-i);const s=dd.toISOString().split('T')[0];const has=ds.has(s);h+=`<div title="${s}" style="width:14px;height:14px;border-radius:3px;background:${has?'#1D9E75':'#f3f4f6'};opacity:${has?1:0.45}"></div>`}return h+'</div>'}
+
+function rSvcAwardsLeader(p){
+  const recent=(p.serviceAwards||[]).slice(0,8)
+  const btns=S.awardTypes.map(t=>`<button onclick="giveAward('${p.id}','${t.id}')" style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:0.5px solid #e5e7eb;border-radius:8px;background:#f9fafb;cursor:pointer;font-family:inherit;text-align:left;width:100%"><i class="ti ${t.icon}" style="font-size:16px;color:#0F6E56;flex-shrink:0"></i><span style="font-size:12px;color:#111827;flex:1;line-height:1.3">${t.label}</span><span style="font-size:11px;color:#0F6E56;font-weight:600;white-space:nowrap">+${t.pts}★</span></button>`).join('')
+  const addForm=S.addingAwardType?`<div style="background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"><p style="font-size:12px;color:#6b7280">New category</p><div style="display:flex;gap:8px"><input type="text" id="nAL" placeholder="e.g. Set up chairs" style="flex:1;font-size:13px"/><input type="number" id="nAP" value="10" min="1" max="100" style="width:60px;font-size:13px"/></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="S.newAwardLabel=document.getElementById('nAL').value;S.newAwardPts=+(document.getElementById('nAP').value||10);addAwardType()"><i class="ti ti-check"></i> Add</button><button class="btn btn-sm" onclick="S.addingAwardType=false;render()">Cancel</button></div></div>`:''
+  const hist=recent.length?recent.map(a=>{const t=S.awardTypes.find(x=>x.id===a.typeId);return`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid #f3f4f6"><i class="ti ${t?.icon||'ti-star'}" style="font-size:13px;color:#0F6E56"></i><span style="font-size:13px;color:#111827;flex:1">${t?.label||a.typeId}</span><span style="font-size:12px;color:#6b7280">${a.date}</span><span style="font-size:11px;color:#0F6E56;font-weight:500">+${a.pts}★</span><button onclick="removeAward('${a.id}','${p.id}')" style="padding:3px 5px;border:none;background:transparent;cursor:pointer;color:#9ca3af"><i class="ti ti-x" style="font-size:12px"></i></button></div>`}).join(''):`<p style="font-size:12px;color:#9ca3af;text-align:center;padding:8px 0">Tap to award — can give these every session</p>`
+  return`<div class="card" style="margin-bottom:1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px;font-weight:500">Service awards</h3><button class="btn btn-sm" onclick="S.addingAwardType=!S.addingAwardType;render()"><i class="ti ti-plus"></i> Add category</button></div>${addForm}<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px${recent.length?';margin-bottom:12px':''}">${btns}</div>${recent.length?`<div style="border-top:0.5px solid #f3f4f6;padding-top:8px">${hist}</div>`:hist}</div>`
+}
+
+function rSvcAwardsYouth(p){
+  const awards=p.serviceAwards||[];const total=awards.reduce((s,a)=>s+(a.pts||10),0)
+  if(!awards.length)return`<div class="card" style="margin-bottom:1rem"><h3 style="font-size:15px;font-weight:500;margin-bottom:8px">Service awards</h3><p style="font-size:13px;color:#9ca3af;text-align:center;padding:1rem 0">None yet — keep showing up!</p></div>`
+  const rows=awards.map(a=>{const t=S.awardTypes.find(x=>x.id===a.typeId);return`<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:0.5px solid #f3f4f6"><div style="width:32px;height:32px;border-radius:50%;background:#E1F5EE;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ${t?.icon||'ti-star'}" style="font-size:15px;color:#0F6E56"></i></div><div style="flex:1;min-width:0"><p style="font-size:13px;font-weight:500;color:#111827">${t?.label||a.typeId}</p><p style="font-size:11px;color:#6b7280;margin-top:2px">${a.date}</p></div><span style="font-size:13px;font-weight:600;color:#0F6E56">+${a.pts}★</span></div>`}).join('')
+  return`<div class="card" style="margin-bottom:1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:15px;font-weight:500">Service awards</h3><span style="font-size:13px;font-weight:600;color:#0F6E56">${total}★ total</span></div>${rows}</div>`
+}
+
+function rAnnLeader(){
+  const rows=S.announcements.map(a=>`<div style="padding:10px 0;border-bottom:0.5px solid #f3f4f6"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px"><div style="flex:1">${a.title?`<p style="font-size:13px;font-weight:500;color:#111827;margin-bottom:3px">${a.title}</p>`:''}<p style="font-size:13px;color:#6b7280;line-height:1.5">${a.body}</p><p style="font-size:11px;color:#9ca3af;margin-top:4px">${fmt(a.created_at)}</p></div><button onclick="delAnn('${a.id}')" style="padding:4px 6px;border:none;background:transparent;cursor:pointer;color:#9ca3af"><i class="ti ti-trash" style="font-size:14px"></i></button></div></div>`).join('')
+  const form=S.postingAnn?`<div style="background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"><input type="text" placeholder="Title (optional)" value="${S.newAnnTitle}" oninput="S.newAnnTitle=this.value" style="width:100%;font-size:13px"/><textarea placeholder="Your message..." oninput="S.newAnnBody=this.value" style="width:100%;font-size:13px;padding:8px 10px;border:0.5px solid #e5e7eb;border-radius:8px;background:white;color:#111827;font-family:inherit;min-height:80px;resize:vertical">${S.newAnnBody}</textarea><div style="display:flex;gap:8px"><button class="btn btn-sm btn-primary" onclick="postAnn()"><i class="ti ti-send"></i> Post</button><button class="btn btn-sm" onclick="S.postingAnn=false;render()">Cancel</button></div></div>`:''
+  return`<div class="card" style="margin-bottom:1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px;font-weight:500">Messages</h3><button class="btn btn-sm" onclick="S.postingAnn=!S.postingAnn;render()"><i class="ti ti-plus"></i> Post</button></div>${form}${rows||'<p style="font-size:13px;color:#9ca3af;text-align:center;padding:8px 0">No messages yet</p>'}</div>`
+}
+function rPlanLeader(){
+  if(S.editingBiblePlan)return`<div class="card" style="margin-bottom:1rem"><h3 style="font-size:15px;font-weight:500;margin-bottom:12px">Bible plan</h3><div style="display:flex;flex-direction:column;gap:8px"><div><p style="font-size:12px;color:#6b7280;margin-bottom:4px">Plan name</p><input type="text" value="${S.biblePlanName}" oninput="S.biblePlanName=this.value" placeholder="e.g. 30 Days of Faith" style="width:100%;font-size:13px"/></div><div><p style="font-size:12px;color:#6b7280;margin-bottom:4px">YouVersion URL</p><input type="text" value="${S.biblePlanUrl}" oninput="S.biblePlanUrl=this.value" placeholder="https://www.bible.com/reading-plans/..." style="width:100%;font-size:13px"/></div><div style="display:flex;gap:8px"><button class="btn btn-sm btn-primary" onclick="savePlan()"><i class="ti ti-check"></i> Save</button><button class="btn btn-sm" onclick="S.editingBiblePlan=false;render()">Cancel</button></div></div></div>`
+  if(!S.biblePlanUrl)return`<div class="card" style="margin-bottom:1rem"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="font-size:15px;font-weight:500">Bible plan</h3><button class="btn btn-sm" onclick="S.editingBiblePlan=true;render()"><i class="ti ti-plus"></i> Set plan</button></div><p style="font-size:13px;color:#9ca3af;margin-top:8px">No plan set — paste a YouVersion link for your group</p></div>`
+  return`<div style="background:#EFF6FF;border:0.5px solid #93C5FD;border-radius:12px;padding:14px 16px;margin-bottom:1rem;display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:10px;background:#3B82F6;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-book" style="font-size:20px;color:white"></i></div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:500;color:#1E3A5F">${S.biblePlanName}</p><p style="font-size:12px;color:#3B82F6;margin-top:2px">Active group plan</p></div><div style="display:flex;gap:6px"><a href="${S.biblePlanUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:7px 12px;background:#3B82F6;color:white;border-radius:8px;font-size:12px;font-weight:500;text-decoration:none">Open <i class="ti ti-external-link" style="font-size:12px"></i></a><button class="btn btn-sm" onclick="S.editingBiblePlan=true;render()"><i class="ti ti-pencil"></i></button></div></div>`
+}
+function rAnnYouth(){if(!S.announcements.length)return'';const cards=S.announcements.slice(0,5).map(a=>`<div style="padding:10px 12px;background:white;border-radius:8px;border-left:3px solid #0F6E56">${a.title?`<p style="font-size:13px;font-weight:600;color:#111827;margin-bottom:4px">${a.title}</p>`:''}<p style="font-size:13px;color:#6b7280;line-height:1.5">${a.body}</p><p style="font-size:11px;color:#9ca3af;margin-top:5px">${fmt(a.created_at)}</p></div>`).join('');return`<div style="background:#F0FDF4;border:0.5px solid #5DCAA5;border-radius:12px;padding:14px 16px;margin-bottom:1rem"><div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><i class="ti ti-bell" style="font-size:16px;color:#0F6E56"></i><p style="font-size:14px;font-weight:500;color:#085041">From your leader</p></div><div style="display:flex;flex-direction:column;gap:8px">${cards}</div></div>`}
+function rPlanYouth(){if(!S.biblePlanUrl)return'';return`<a href="${S.biblePlanUrl}" target="_blank" style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:#EFF6FF;border:0.5px solid #93C5FD;border-radius:12px;margin-bottom:1rem;text-decoration:none"><div style="width:42px;height:42px;border-radius:10px;background:#3B82F6;display:flex;align-items:center;justify-content:center;flex-shrink:0"><i class="ti ti-book" style="font-size:20px;color:white"></i></div><div style="flex:1;min-width:0"><p style="font-size:14px;font-weight:500;color:#1E3A5F">${S.biblePlanName}</p><p style="font-size:12px;color:#3B82F6;margin-top:2px">Tap to open in YouVersion</p></div><i class="ti ti-chevron-right" style="font-size:16px;color:#3B82F6"></i></a>`}
+
+function render(){const app=document.getElementById('app');({leaderDash:rLeaderDash,groupLog:rGroupLog,groupSummary:rGroupSummary,leaderProfile:rLeaderProfile,youthHome:rYouthHome,celebrate:rCelebrate})[S.sc]?.(app)}
+
+function rLeaderDash(app){
+  const sc=STAGES.map(s=>S.youth.filter(y=>y.stage===s.id).length)
+  const wc=S.youth.filter(p=>{const l=[...(p.sessions||[])].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];return l&&Math.floor((new Date()-new Date(l.date))/86400000)>21}).length
+  let h=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem"><div><p style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#9ca3af">Living Church</p><h1 style="font-size:22px;font-weight:500;color:#111827;margin-top:2px">The Journey</h1></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="S.addY=!S.addY;render()"><i class="ti ti-user-plus"></i> Add</button><button class="btn btn-sm" onclick="signOut()"><i class="ti ti-logout"></i></button></div></div>`
+  if(S.addY)h+=`<div class="card" style="margin-bottom:1rem"><p style="font-size:14px;font-weight:500;margin-bottom:10px">Add young person</p><div style="display:flex;gap:8px"><input id="yn" type="text" placeholder="Full name" value="${S.newName}" oninput="S.newName=this.value" onkeydown="if(event.key==='Enter')addPerson()" style="flex:1"/><button class="btn" onclick="addPerson()">Add</button><button class="btn btn-sm" onclick="S.addY=false;render()"><i class="ti ti-x"></i></button></div></div>`
+  h+=rAnnLeader()+rPlanLeader()
+  h+=`<button class="btn btn-primary" onclick="S.glSel={};S.sc='groupLog';render()" style="width:100%;justify-content:center;padding:12px;margin-bottom:1rem;font-size:14px"><i class="ti ti-calendar-plus"></i> Log a session for the group</button>`
+  h+=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:${wc?'0.75':'1.25'}rem">${STAGES.map((s,i)=>`<div style="background:${s.bg};border-radius:8px;padding:10px 6px;text-align:center"><p style="font-size:22px;font-weight:500;color:${s.color}">${sc[i]}</p><p style="font-size:11px;color:${s.color};opacity:0.85;margin-top:1px">${s.label}</p></div>`).join('')}</div>`
+  if(wc)h+=`<div style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:#FAECE7;border-radius:8px;margin-bottom:1rem"><i class="ti ti-alert-circle" style="font-size:16px;color:#712B13;flex-shrink:0"></i><p style="font-size:13px;color:#712B13">${wc} young ${wc===1?"person hasn't":"people haven't"} been seen in 3+ weeks</p></div>`
+  if(!S.youth.length)h+=`<div style="text-align:center;padding:2rem;color:#6b7280"><i class="ti ti-users" style="font-size:36px;display:block;margin-bottom:10px"></i><p>No young people yet. They'll appear when they sign up.</p></div>`
+  else{h+=`<div style="display:flex;flex-direction:column;gap:8px">`;S.youth.forEach(p=>{const s=stg(p);const si=STAGES.findIndex(x=>x.id===p.stage);const tl=totLv(p);const str=habStr(p);const last=[...(p.sessions||[])].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];const warn=last&&Math.floor((new Date()-new Date(last.date))/86400000)>21;const dots=STAGES.map((x,i)=>`<div style="width:7px;height:7px;border-radius:50%;background:${i<=si?x.color:'#e5e7eb'}"></div>`).join('');h+=`<div class="card" style="cursor:pointer;display:flex;align-items:center;gap:12px${warn?';border-color:#F0997B':''}" onclick="S.sel='${p.id}';S.selBadge=null;S.sc='leaderProfile';render()"><div style="width:40px;height:40px;border-radius:50%;background:${s.bg};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:500;color:${s.color};flex-shrink:0">${p.name[0].toUpperCase()}</div><div style="flex:1;min-width:0"><p style="font-size:15px;font-weight:500;color:#111827">${p.name}${p.baptism?` <i class="ti ti-droplet-filled" style="font-size:12px;color:${BAP_C.deep}"></i>`:''}</p><div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:3px"><span style="font-size:11px;padding:2px 8px;border-radius:20px;background:${s.bg};color:${s.color};font-weight:500">${s.label}</span><span style="font-size:12px;color:#6b7280">${tl}/15 levels</span>${str>0?`<span style="font-size:12px;color:#0F6E56">${str}d streak</span>`:''} ${warn?`<span style="font-size:11px;padding:2px 7px;border-radius:20px;background:#FAECE7;color:#712B13">Check in</span>`:''}</div></div><div style="display:flex;gap:3px">${dots}</div><i class="ti ti-chevron-right" style="font-size:15px;color:#9ca3af"></i></div>`});h+=`</div>`}
+  app.innerHTML=h;if(S.addY)setTimeout(()=>{document.getElementById('yn')?.focus()},50)
+}
+
+function rGroupLog(app){
+  const sc=S.youth.filter(y=>S.glSel[y.id]?.on).length;const ao=S.youth.length>0&&S.youth.every(y=>S.glSel[y.id]?.on)
+  const to=SESSION_TYPES.map(t=>`<option value="${t.id}" ${S.glType===t.id?'selected':''}>${t.label}</option>`).join('')
+  const rows=S.youth.map(p=>{const s=stg(p);const on=!!S.glSel[p.id]?.on;const inv=!!S.glSel[p.id]?.invited;return`<div style="border-bottom:0.5px solid #f3f4f6;padding:10px 0"><label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" ${on?'checked':''} onchange="togGlP('${p.id}')"/><div style="width:34px;height:34px;border-radius:50%;background:${on?s.bg:'#f9fafb'};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500;color:${on?s.color:'#9ca3af'};flex-shrink:0">${p.name[0].toUpperCase()}</div><p style="font-size:14px;font-weight:${on?500:400};color:${on?'#111827':'#6b7280'};flex:1">${p.name}</p><span style="font-size:11px;padding:2px 7px;border-radius:20px;background:${s.bg};color:${s.color}">${s.label}</span></label>${on?`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:6px 0 0 44px"><input type="checkbox" ${inv?'checked':''} onchange="togGlI('${p.id}')"/><span style="font-size:12px;color:#6b7280">Brought a friend</span></label>`:''}</div>`}).join('')
+  app.innerHTML=`<button class="btn btn-sm" onclick="S.sc='leaderDash';render()" style="margin-bottom:1.25rem"><i class="ti ti-arrow-left"></i> Back</button><h2 style="font-size:18px;font-weight:500;color:#111827;margin-bottom:1rem">Log a session</h2><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.25rem"><div><p style="font-size:12px;color:#6b7280;margin-bottom:5px">Session type</p><select onchange="S.glType=this.value" style="width:100%;font-size:13px">${to}</select></div><div><p style="font-size:12px;color:#6b7280;margin-bottom:5px">Date</p><input type="date" value="${S.glDate}" oninput="S.glDate=this.value" style="width:100%;font-size:13px"/></div></div><div class="card" style="padding:0 1.25rem"><div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid #f3f4f6"><p style="font-size:13px;font-weight:500;color:#111827">${S.youth.length} young people</p><div style="display:flex;gap:8px;align-items:center">${sc>0?`<span style="font-size:12px;color:#0F6E56;font-weight:500">${sc} selected</span>`:''}<button class="btn btn-sm" onclick="togGlAll()">${ao?'Deselect all':'Select all'}</button></div></div>${rows||'<p style="font-size:13px;color:#9ca3af;text-align:center;padding:2rem">No young people yet</p>'}</div><div style="margin-top:1.25rem"><button class="btn btn-primary" onclick="saveGroupLog()" ${!sc?"disabled style='opacity:0.4;cursor:not-allowed'":''} style="width:100%;justify-content:center;padding:12px;font-size:14px"><i class="ti ti-check"></i> Save session for ${sc||'...'} ${sc===1?'person':'people'}</button></div>`
+}
+
+function rGroupSummary(app){
+  const gs=S.groupSummary;if(!gs){S.sc='leaderDash';render();return}
+  const cf=gs.newLevels.length?mkConf():'';const rows=gs.newLevels.map((item,i)=>{const c=PC[item.badge.pillar];return`<div class="slide" style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:${c.bg};border-radius:8px;animation-delay:${(.08*i).toFixed(2)}s"><i class="ti ${item.badge.icon}" style="font-size:20px;color:${c.text};flex-shrink:0"></i><div style="flex:1"><p style="font-size:13px;font-weight:500;color:${c.text}">${item.person}</p><p style="font-size:12px;color:${c.text};opacity:0.8">${item.badge.label} · Level ${item.levelNum} · ${item.levelData.name}</p></div><span style="font-size:11px;color:${c.text};opacity:0.75">+${item.levelData.pts}★</span></div>`}).join('')
+  app.innerHTML=`<div style="border-radius:12px;background:${gs.newLevels.length?'#0D1225':'#f9fafb'};min-height:460px;position:relative;overflow:hidden;display:flex;flex-direction:column;padding:2rem 1.5rem;gap:1.25rem">${cf}<div style="position:relative;z-index:2;text-align:center;padding-top:.5rem"><div style="width:56px;height:56px;border-radius:50%;background:${gs.newLevels.length?'rgba(255,255,255,0.1)':'#E1F5EE'};display:flex;align-items:center;justify-content:center;margin:0 auto 14px"><i class="ti ti-check" style="font-size:26px;color:${gs.newLevels.length?'#5DCAA5':'#0F6E56'}"></i></div><h2 style="font-size:22px;font-weight:500;color:${gs.newLevels.length?'white':'#111827'}">Session logged</h2><p style="font-size:14px;color:${gs.newLevels.length?'rgba(255,255,255,0.6)':'#6b7280'};margin-top:6px">${gs.type} · ${gs.date} · ${gs.count} ${gs.count===1?'person':'people'}</p></div>${gs.newLevels.length?`<div style="position:relative;z-index:2"><p style="font-size:12px;color:rgba(255,255,255,0.5);text-align:center;margin-bottom:10px;letter-spacing:0.08em;text-transform:uppercase">${gs.newLevels.length} badge level${gs.newLevels.length!==1?'s':''} earned tonight</p><div style="display:flex;flex-direction:column;gap:8px">${rows}</div></div>`:`<p style="position:relative;z-index:2;font-size:14px;color:#6b7280;text-align:center">No new levels tonight — keep showing up.</p>`}<div style="position:relative;z-index:2;margin-top:auto"><button onclick="S.groupSummary=null;S.sc='leaderDash';render()" style="${gs.newLevels.length?'padding:12px;font-size:14px;font-weight:500;border:1px solid rgba(255,255,255,0.22);border-radius:8px;background:rgba(255,255,255,0.09);color:white;cursor:pointer;width:100%':'display:inline-flex;align-items:center;justify-content:center;width:100%;padding:12px;font-size:13px;border:0.5px solid #e5e7eb;border-radius:8px;background:transparent;color:#111827;cursor:pointer'}">Done</button></div></div>`
+}
+
+function rLeaderProfile(app){
+  const p=S.youth.find(y=>y.id===S.sel);if(!p){S.sc='leaderDash';render();return}
+  const s=stg(p);const sp=pts(p);const lv=lvl(sp);const str=habStr(p);const tl=totLv(p)
+  let lf=''
+  if(S.logMode==='session'){const o=SESSION_TYPES.map(t=>`<option value="${t.id}" ${S.logData.type===t.id?'selected':''}>${t.label}</option>`).join('');lf=`<div style="background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><p style="font-size:12px;color:#6b7280;margin-bottom:4px">Type</p><select onchange="S.logData.type=this.value" style="width:100%;font-size:13px">${o}</select></div><div><p style="font-size:12px;color:#6b7280;margin-bottom:4px">Date</p><input type="date" value="${S.logData.date}" oninput="S.logData.date=this.value" style="width:100%;font-size:13px"/></div></div><label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#6b7280;cursor:pointer"><input type="checkbox" ${S.logData.invited?'checked':''} onchange="S.logData.invited=this.checked"/> Brought a friend along</label><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="logSession()"><i class="ti ti-check"></i> Save</button><button class="btn btn-sm" onclick="S.logMode=null;render()">Cancel</button></div></div>`}
+  else if(S.logMode==='serving'){lf=`<div style="background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div><p style="font-size:12px;color:#6b7280;margin-bottom:4px">Role / team</p><input type="text" placeholder="e.g. Welcome team" value="${S.logData.role}" oninput="S.logData.role=this.value" style="width:100%;font-size:13px"/></div><div><p style="font-size:12px;color:#6b7280;margin-bottom:4px">Date</p><input type="date" value="${S.logData.date}" oninput="S.logData.date=this.value" style="width:100%;font-size:13px"/></div></div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="logServing()"><i class="ti ti-check"></i> Save</button><button class="btn btn-sm" onclick="S.logMode=null;render()">Cancel</button></div></div>`}
+  else if(S.logMode==='ach'){const av=ACH_TYPES.filter(a=>!hAch(p,a.id));lf=`<div style="background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">${!av.length?`<p style="font-size:13px;color:#6b7280">All achievements awarded!</p>`:`<p style="font-size:13px;font-weight:500;margin-bottom:10px;color:#111827">Award an achievement</p><select onchange="S.logData.achId=this.value" style="width:100%;font-size:13px;margin-bottom:10px"><option value="">Select...</option>${av.map(a=>`<option value="${a.id}">${a.label}</option>`).join('')}</select><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="awardAch()"><i class="ti ti-check"></i> Award</button><button class="btn btn-sm" onclick="S.logMode=null;render()">Cancel</button></div>`}</div>`}
+  else if(S.logMode==='baptism'){lf=`<div style="background:${BAP_C.bg};border:0.5px solid ${BAP_C.border};border-radius:8px;padding:12px;margin-bottom:12px;display:flex;flex-direction:column;gap:8px"><p style="font-size:13px;font-weight:500;color:${BAP_C.text}">${p.baptism?'Update baptism date':'Record baptism'}</p>${p.baptism?`<p style="font-size:12px;color:${BAP_C.deep}">Currently: ${p.baptism.date}</p>`:''}<input type="date" value="${p.baptism?.date||S.logData.date}" oninput="S.logData.date=this.value" style="width:100%;font-size:13px"/><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="logBaptism()" style="background:${BAP_C.deep};color:white;border-color:${BAP_C.deep}"><i class="ti ti-droplet-filled"></i> ${p.baptism?'Update':'Record'}</button><button class="btn btn-sm" onclick="S.logMode=null;render()">Cancel</button></div></div>`}
+  const ar=[...(p.sessions||[]).map(r=>({date:r.date,label:SESSION_TYPES.find(t=>t.id===r.type)?.label||'Session',pillar:'Belong',note:r.invited?'+ brought a friend':''})),...(p.servings||[]).map(r=>({date:r.date,label:'Serving'+(r.role?`: ${r.role}`:''),pillar:'Bless',note:''}))].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,8)
+  const ah=(p.achs||[]).map(id=>{const a=ACH_TYPES.find(x=>x.id===id);if(!a)return'';const c=PC[a.pillar]||PC.Belong;return`<span style="font-size:11px;padding:3px 9px;border-radius:20px;background:${c.bg};color:${c.text};border:0.5px solid ${c.border}">${a.label}</span>`}).join('')
+  const so=STAGES.map(x=>`<option value="${x.id}" ${p.stage===x.id?'selected':''}>${x.label}</option>`).join('')
+  app.innerHTML=`<button class="btn btn-sm" onclick="S.sc='leaderDash';render()" style="margin-bottom:1rem"><i class="ti ti-arrow-left"></i> All youth</button>
+  <div style="background:${s.bg};border-radius:12px;padding:1.25rem;margin-bottom:1rem"><div style="display:flex;align-items:center;gap:12px;margin-bottom:16px"><div style="width:50px;height:50px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:500;color:${s.color};flex-shrink:0">${p.name[0].toUpperCase()}</div><div style="flex:1;min-width:0"><h2 style="font-size:18px;font-weight:500;color:${s.color}">${p.name}</h2><p style="font-size:12px;color:${s.color};opacity:0.75;margin-top:2px">${lv.l} · ${sp} stars · ${tl}/15 levels</p></div><button onclick="showCel('${p.id}')" style="display:inline-flex;align-items:center;gap:6px;padding:7px 12px;font-size:12px;border:0.5px solid #5DCAA5;border-radius:8px;background:white;color:#085041;cursor:pointer;flex-shrink:0;font-weight:500"><i class="ti ti-gift"></i> Celebrate</button></div><div style="display:flex;align-items:center">${stepBar(p,s.color)}</div></div>
+  ${batpCard(p)}
+  <div class="card" style="margin-bottom:1rem"><h3 style="font-size:15px;font-weight:500;margin-bottom:14px">Journey badges</h3>${badgePath(p)}${badgeExp(p)}</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem">${sbox('Fridays',frSess(p),'ti-bolt')}${sbox('Sundays',suSess(p),'ti-home')}${sbox('Serving',srvs(p),'ti-heart')}${sbox('Streak',str+'d','ti-flame')}</div>
+  <div class="card" style="margin-bottom:1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px;font-weight:500">Activity log</h3><div style="display:flex;gap:5px;flex-wrap:wrap"><button class="btn btn-sm" onclick="S.logMode=S.logMode==='session'?null:'session';render()"><i class="ti ti-calendar-plus"></i> Session</button><button class="btn btn-sm" onclick="S.logMode=S.logMode==='serving'?null:'serving';render()"><i class="ti ti-heart"></i> Serving</button><button class="btn btn-sm" onclick="S.logMode=S.logMode==='ach'?null:'ach';render()"><i class="ti ti-award"></i> Award</button><button class="btn btn-sm" onclick="S.logMode=S.logMode==='baptism'?null:'baptism';render()" style="${p.baptism?`color:${BAP_C.deep};border-color:${BAP_C.border};background:${BAP_C.bg}`:''}"><i class="ti ti-droplet-filled"></i> Baptism</button></div></div>${lf}${!ar.length?`<p style="font-size:13px;color:#9ca3af;text-align:center;padding:1rem">No activity logged yet</p>`:ar.map(r=>{const c=PC[r.pillar];return`<div style="display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:0.5px solid #f3f4f6"><span style="font-size:12px;color:#6b7280;min-width:82px;padding-top:2px">${r.date}</span><span style="font-size:13px;color:#111827;flex:1">${r.label}${r.note?` <span style="font-size:11px;color:#0F6E56">${r.note}</span>`:''}</span>${ptag(r.pillar,r.pillar)}</div>`}).join('')}</div>
+  ${rSvcAwardsLeader(p)}
+  ${(p.habits||[]).length?`<div class="card" style="margin-bottom:1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:15px;font-weight:500">Habit tracker</h3><span style="font-size:12px;color:#6b7280">${str>0?str+'-day streak':'No current streak'}</span></div>${habGrid(p,21)}</div>`:''}
+  ${ah?`<div class="card" style="margin-bottom:1rem"><h3 style="font-size:15px;font-weight:500;margin-bottom:10px">Achievements</h3><div style="display:flex;flex-wrap:wrap;gap:6px">${ah}</div></div>`:''}
+  <div style="display:flex;gap:8px;align-items:center"><div class="card" style="flex:1"><p style="font-size:13px;color:#6b7280;margin-bottom:8px">Stage</p><select onchange="setStage('${p.id}',this.value)" style="width:100%;font-size:13px">${so}</select></div><button class="btn btn-sm" onclick="removePerson('${p.id}')" style="color:#9ca3af"><i class="ti ti-trash"></i></button></div>`
+}
+
+function rYouthHome(app){
+  const p=S.person;if(!p){return}
+  const s=stg(p);const sp=pts(p);const lv=lvl(sp);const str=habStr(p);const tl=totLv(p);const todayH=p.habits.find(h=>h.date===TODAY)
+  let todaySec=''
+  if(S.habitEditing){const hh=DAILY.map(h=>{const on=!!S.habitForm[h.id];const c=PC[h.pillar];return`<label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:10px 12px;border-radius:8px;border:0.5px solid ${on?c.border:'#f3f4f6'};background:${on?c.bg:'transparent'}"><input type="checkbox" ${on?'checked':''} onchange="S.habitForm['${h.id}']=this.checked;render()"/><i class="ti ${h.icon}" style="font-size:15px;color:${on?c.text:'#6b7280'}"></i><span style="font-size:13px;color:${on?c.text:'#6b7280'}">${h.label}</span></label>`}).join('');todaySec=`<div class="card" style="margin-bottom:1rem;border:0.5px solid #5DCAA5"><p style="font-size:13px;font-weight:500;margin-bottom:10px;color:#111827">Today's habits</p><div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">${hh}</div><div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="saveHabits()"><i class="ti ti-check"></i> Save today</button><button class="btn btn-sm" onclick="S.habitEditing=false;render()">Cancel</button></div></div>`}
+  else if(todayH){const tags=DAILY.filter(d=>todayH[d.id]).map(d=>`<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 8px;border-radius:20px;background:#E1F5EE;color:#085041"><i class="ti ${d.icon}" style="font-size:11px"></i>${d.label}</span>`).join('');todaySec=`<div style="background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:12px;padding:14px 16px;margin-bottom:1rem;display:flex;align-items:flex-start;gap:12px"><div style="width:22px;height:22px;border-radius:50%;background:#0F6E56;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px"><i class="ti ti-check" style="font-size:13px;color:white"></i></div><div style="flex:1"><p style="font-size:13px;font-weight:500;color:#085041">Today logged</p><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${tags}</div></div><button class="btn btn-sm" onclick="startEditHab('${p.id}')" style="font-size:11px;flex-shrink:0">Edit</button></div>`}
+  else{todaySec=`<div class="card" style="margin-bottom:1rem;border:0.5px solid #5DCAA5"><div style="display:flex;align-items:center;gap:12px"><div style="flex:1"><p style="font-size:14px;font-weight:500;color:#111827">How was today?</p><p style="font-size:12px;color:#6b7280;margin-top:3px">Log prayer, reading, worship</p></div><button class="btn" onclick="S.habitEditing=true;S.habitForm={};render()"><i class="ti ti-plus"></i> Log today</button></div></div>`}
+  let nh='';for(const b of BADGES){const bl=bLv(p,b.id);if(bl<3){const nl=b.levels[bl];const c=PC[b.pillar];nh=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${c.bg};border-radius:8px;margin-bottom:1rem"><i class="ti ${b.icon}" style="font-size:16px;color:${c.text}"></i><p style="font-size:13px;color:${c.text}"><span style="font-weight:500">${b.label} Level ${nl.n}:</span> ${nl.desc}</p></div>`;break}}
+  const act=[...(p.sessions||[]).map(r=>({date:r.date,label:SESSION_TYPES.find(t=>t.id===r.type)?.label||'Session',pillar:'Belong'})),...(p.servings||[]).map(r=>({date:r.date,label:'Serving'+(r.role?`: ${r.role}`:''),pillar:'Bless'}))].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5)
+  app.innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem"><p style="font-size:12px;color:#9ca3af;letter-spacing:0.08em;text-transform:uppercase">The Journey</p><button class="btn btn-sm" onclick="signOut()"><i class="ti ti-logout"></i></button></div>
+  <div style="background:${s.bg};border-radius:12px;padding:1.5rem;margin-bottom:1rem"><div style="display:flex;align-items:center;gap:14px;margin-bottom:18px"><div style="width:56px;height:56px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:500;color:${s.color};flex-shrink:0">${p.name[0].toUpperCase()}</div><div><h2 style="font-size:20px;font-weight:500;color:${s.color}">${p.name}</h2><p style="font-size:12px;color:${s.color};opacity:0.75;margin-top:3px;font-style:italic">${s.desc}</p><span style="display:inline-flex;align-items:center;gap:5px;margin-top:7px;padding:4px 10px;background:white;border-radius:20px"><i class="ti ${lv.i}" style="font-size:12px;color:#BA7517"></i><span style="font-size:12px;font-weight:500;color:#633806">${lv.l} · ${sp} stars</span></span></div></div><div style="display:flex;align-items:center">${stepBar(p,s.color)}</div></div>
+  ${rAnnYouth()}${rPlanYouth()}
+  ${p.baptism?batpCard(p):''}
+  ${todaySec}${nh}
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem">${sbox('Fridays',frSess(p),'ti-bolt')}${sbox('Sundays',suSess(p),'ti-home')}${sbox('Levels',tl+'/15','ti-award')}${sbox('Streak',str+'d','ti-flame')}</div>
+  <div class="card" style="margin-bottom:1rem"><h3 style="font-size:15px;font-weight:500;margin-bottom:14px">Your journey badges</h3>${badgePath(p)}${badgeExp(p)}</div>
+  <div class="card" style="margin-bottom:1rem"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h3 style="font-size:15px;font-weight:500">Habit history</h3><span style="font-size:12px;color:#6b7280">${(p.habits||[]).length} days logged</span></div>${habGrid(p,21)}<p style="font-size:11px;color:#9ca3af;margin-top:8px">Each square is a day you logged at least one habit</p></div>
+  ${rSvcAwardsYouth(p)}
+  ${act.length?`<div class="card"><h3 style="font-size:15px;font-weight:500;margin-bottom:12px">Recent activity</h3>${act.map(a=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid #f3f4f6"><i class="ti ti-${a.pillar==='Bless'?'heart':'calendar-check'}" style="font-size:14px;color:#6b7280"></i><span style="font-size:13px;color:#111827;flex:1">${a.label}</span><span style="font-size:12px;color:#6b7280">${a.date}</span></div>`).join('')}</div>`:''}`
+}
+
+function rCelebrate(app){
+  const p=SESSION.role==='leader'?S.youth.find(y=>y.id===S.sel):S.person
+  if(S.celBaptism){const wt=mkConf(['#7DD3FC','#38BDF8','#0EA5E9','#BAE6FD','#E0F2FE','#0369A1']);app.innerHTML=`<div style="border-radius:12px;background:#0C2444;min-height:580px;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem 1.5rem;gap:1.25rem;text-align:center">${wt}<div class="dropin" style="position:relative;z-index:2;width:96px;height:96px;border-radius:50%;background:rgba(125,211,252,0.15);border:2px solid rgba(125,211,252,0.3);display:flex;align-items:center;justify-content:center"><i class="ti ti-droplet-filled" style="font-size:48px;color:#7DD3FC"></i></div><div class="pop" style="position:relative;z-index:2;animation-delay:0.2s"><p style="font-size:12px;color:rgba(255,255,255,0.4);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px">A significant moment</p><h2 style="font-size:26px;font-weight:500;color:white;margin-bottom:6px">${p?.name||''} was baptised</h2><p style="font-size:14px;color:#7DD3FC">${p?.baptism?.date||''}</p></div><div class="pop" style="position:relative;z-index:2;background:rgba(125,211,252,0.1);border:0.5px solid rgba(125,211,252,0.25);border-radius:12px;padding:16px 24px;max-width:300px;animation-delay:0.35s"><p style="font-size:14px;color:rgba(255,255,255,0.75);line-height:1.65;font-style:italic">"Going under the water was a burial of your old life; coming up out of it was a resurrection."</p><p style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:8px">Colossians 2:12</p></div><div style="position:relative;z-index:2"><button onclick="closeCel()" style="padding:12px 32px;font-size:14px;font-weight:500;border:1px solid rgba(125,211,252,0.3);border-radius:8px;background:rgba(125,211,252,0.1);color:#E0F2FE;cursor:pointer">Back</button></div></div>`;return}
+  const items=S.cel;const cf=mkConf();const isAll=S.celAll
+  if(!items.length){app.innerHTML=`<div style="border-radius:12px;background:#0D1225;min-height:500px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2.5rem;text-align:center;gap:1rem"><i class="ti ti-heart" style="font-size:48px;color:#5DCAA5;display:block"></i><h2 style="font-size:22px;font-weight:500;color:white">${p?.name||'Champion'} is just getting started!</h2><button onclick="closeCel()" style="margin-top:1rem;padding:12px 28px;font-size:14px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.08);color:white;cursor:pointer">Back</button></div>`;return}
+  const grid=items.length>2;const cards=items.map((item,i)=>{const c=PC[item.badge.pillar];return`<div class="pop" style="background:${c.bg};border:0.5px solid ${c.border};border-radius:12px;padding:${grid?'12px 10px':'1.5rem'};text-align:center;animation-delay:${(i*.1).toFixed(2)}s"><i class="ti ${item.badge.icon}" style="font-size:${grid?24:42}px;color:${c.text};display:block"></i><div style="display:inline-flex;align-items:center;gap:4px;margin-top:8px;padding:3px 10px;border-radius:20px;background:white"><span style="font-size:11px;font-weight:500;color:${c.text}">${item.badge.label} · Level ${item.levelNum}</span></div><h3 style="font-size:${grid?13:18}px;font-weight:500;color:${c.text};margin-top:6px">${item.levelData.name}</h3>${!grid?`<p style="font-size:12px;color:${c.text};opacity:0.7;margin-top:5px;line-height:1.4">${item.levelData.desc}</p>`:''}<p style="font-size:11px;color:${c.text};margin-top:6px;opacity:0.8">+${item.levelData.pts}★</p></div>`}).join('')
+  app.innerHTML=`<div style="border-radius:12px;background:#0D1225;min-height:560px;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;gap:1.5rem">${cf}<div style="position:relative;z-index:2;text-align:center"><p style="font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:7px">${isAll?`celebrating ${p?.name||''}`:'badge level earned'}</p><h2 style="font-size:24px;font-weight:500;color:white">${isAll?`${items.length} level${items.length!==1?'s':''} earned so far`:`Amazing, ${p?.name||''}!`}</h2></div><div style="position:relative;z-index:2;display:grid;grid-template-columns:${grid?'1fr 1fr':'1fr'};gap:12px;width:100%;max-width:${grid?'100%':'280px'}">${cards}</div><div style="position:relative;z-index:2"><button onclick="closeCel()" style="padding:12px 32px;font-size:14px;font-weight:500;border:1px solid rgba(255,255,255,0.22);border-radius:8px;background:rgba(255,255,255,0.09);color:white;cursor:pointer">${isAll?'Back':'Keep going! →'}</button></div></div>`
+}
+
+async function init(){
+  const saved=localStorage.getItem('tj_session')
+  if(saved){
+    try{
+      SESSION=JSON.parse(saved)
+      await loadData()
+      S.sc=SESSION.role==='leader'?'leaderDash':'youthHome'
+      document.getElementById('loading').style.display='none'
+      document.getElementById('app').style.display='block'
+      document.body.style.background='white'
+      render();return
+    }catch(e){console.error('Session error:',e);localStorage.removeItem('tj_session')}
+  }
+  document.getElementById('loading').style.display='none'
+  document.getElementById('auth-screen').style.display='flex'
+}
+init()
+</script>
+</body>
+</html>
